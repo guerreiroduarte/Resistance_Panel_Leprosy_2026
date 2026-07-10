@@ -1,0 +1,15 @@
+name: leprosy_amr_panel
+channels:
+  - default
+  - base
+  - conda-forge
+  - bioconda
+  - R
+dependencies:
+  - python=3.12
+  - porechop=0.2.4
+  - filtlong=0.3.1
+  - minimap2=2.31
+  - samtools=1.23.1
+  - clair3=2.0.1
+  
