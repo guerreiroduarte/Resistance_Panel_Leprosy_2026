@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Define optional varibles
+# Define optional variables
 MIN_LENGTH=100
 MAX_LENGTH=1000
 MIN_MEAN_Q=8
@@ -22,11 +22,20 @@ for read in "$READS_DIR"/*.fastq.gz; do
     # Name of the samples (it is the same as the file name)
     base_name=$(basename "$read" .fastq.gz)
     trimmed_read="$OUTPUT_DIR/trimmed_${base_name}.fastq"
-    filtered_read="$OUTPUT_DIR/filtered_${base_name}.fastq"
+    filtered_read="$OUTPUT_DIR/filtered_${base_name}.fastq.gz"
     
-    porechop -i "$read" -o "$trimmed_read" --check_reads 1000
+    if [ ! -f "$trimmed_read" ]; then
+        echo "Trimming adapters from $base_name."
+        porechop -i "$read" -o "$trimmed_read" --check_reads 1000
 
-    filtlong -l "$MIN_LENGTH" -L "$MAX_LENGTH" -q "$MIN_MEAN_Q" | gzip > "$filtered_read"
+        filtlong \
+        -l "$MIN_LENGTH" \
+        -L "$MAX_LENGTH" \
+        -q "$MIN_MEAN_Q" \
+        "$trimmed_read"  | \
+        gzip > "$filtered_read"
 
-    rm -rf "$trimmed_read"
+    else
+        echo "Adapters were already trimmed from $base_name."
+    fi
 done
