@@ -34,14 +34,6 @@ fi
 samtools faidx "$ref_genome" -r "$faidx_format" -o "$target_in_fasta"
 samtools faidx "$target_in_fasta"
 
-rm -rf "$"$ALIGNMENT_STATS/coverage.txt""
-
-mkdir -p "data/analysis_data"
-
-amplicon_stats="data/analysis_data/coverage.txt"
-
-echo -e "SAMPLE\tGENE\tNREADS\tBREADTH\tMEAN_COVERAGE" > "$amplicon_stats"
-
 for read in "$READS_DIR"/filtered_*.fastq.gz; do
     file_name=$(basename "$read" .fastq.gz)
     sample_name=${file_name#filtered_}
@@ -65,10 +57,15 @@ for read in "$READS_DIR"/filtered_*.fastq.gz; do
         echo "Reads were already aligned to reference targets..."
     fi
 
-    echo "Computing amplicon coverage for $sample_name"
-    paste <(bedtools coverage -a "$REGIONS_BED" -b "$amplicon_sorted") \
-          <(bedtools coverage -mean -a "$REGIONS_BED" -b "$amplicon_sorted") | \
-
-        awk -v s="$sample_name" 'BEGIN{OFS="\t"} {print s, $4, $5, $8, $13}' >> "$amplicon_stats"
-
 done
+
+mkdir -p "$OUTPUT_DIR/Stats"
+
+amplicon_stats="$OUTPUT_DIR/Stats/coverage.txt"
+
+rm -rf "$amplicon_stats"
+
+echo -e "METRIC\tSAMPLE\tRPOB\tGYRA\tGYRB\tFOLP1\tFOLP2\t23S_RNA_I\t23S_RNA_II" > "$amplicon_stats"
+
+samtools ampliconstats "$PRIMER_BED" "$OUTPUT_DIR"/*.bam | \
+    grep -E "^(FRPERC|FDEPTH|FVDEPTH|FREADS|FPCOV)" >> "$amplicon_stats"
