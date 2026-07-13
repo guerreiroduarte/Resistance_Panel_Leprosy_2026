@@ -69,3 +69,20 @@ echo -e "METRIC\tSAMPLE\tRPOB\tGYRA\tGYRB\tFOLP1\tFOLP2\t23S_RNA_I\t23S_RNA_II" 
 
 samtools ampliconstats "$PRIMER_BED" "$OUTPUT_DIR"/*.bam | \
     grep -E "^(FRPERC|FDEPTH|FVDEPTH|FREADS|FPCOV)" >> "$amplicon_stats"
+
+REGIOES=($(awk 'OFS=":" {print $1, $2 "-" $3}' "$REGIONS_BED"))
+
+for bam in "$OUTPUT_DIR"/*.bam; do
+    sample_name=$(basename "$bam" .bam)
+    linha_metric="READSIZE\t${sample_name}"
+    
+    for regiao in "${REGIOES[@]}"; do
+        bases_inside=$(samtools stats "$bam" "$regiao" | \
+                       grep "average length:" | \
+                       awk '{print $NF}')
+    
+        linha_metric="${linha_metric}\t${bases_inside}"
+    done
+    
+    echo -e "$linha_metric" >> "$amplicon_stats"
+done
