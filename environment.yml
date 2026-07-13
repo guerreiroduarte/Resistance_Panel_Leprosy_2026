@@ -4,13 +4,15 @@ channels:
   - base
   - conda-forge
   - bioconda
-  - R
+  - r
 dependencies:
   - python=3.11
   - porechop=0.2.4
   - filtlong=0.3.1
   - minimap2=2.31
   - samtools=1.23.1
-  - clair3=2.0.2
+  - bcftools=1.23.1
   - r-base=4.5.3
-  - r-tidyverse
+  - r-here
+  - r-languageserver
+  - r-essentials
