@@ -1,4 +1,8 @@
 
+# Project file
+*.Rproj
+
+# Data files
 /data
 
 # History files
