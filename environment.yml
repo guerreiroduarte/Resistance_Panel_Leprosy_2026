@@ -1,10 +1,8 @@
 name: leprosy_amr_panel
 channels:
-  - default
-  - base
   - conda-forge
   - bioconda
-  - r
+  - defaults
 dependencies:
   - python=3.11
   - porechop=0.2.4
@@ -12,7 +10,7 @@ dependencies:
   - minimap2=2.31
   - samtools=1.23.1
   - bcftools=1.23.1
-  - r-base=4.5.3
+  - r-base=4.4.3
   - r-here
-  - r-languageserver
-  - r-essentials
+  - rstudio-desktop
+  - r-tidyverse
