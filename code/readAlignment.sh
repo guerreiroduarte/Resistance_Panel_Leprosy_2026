@@ -34,6 +34,14 @@ fi
 samtools faidx "$ref_genome" -r "$faidx_format" -o "$target_in_fasta"
 samtools faidx "$target_in_fasta"
 
+rm -rf "$faidx_format"
+
+aln_stats="$OUTPUT_DIR/Stats/alignment.txt"
+
+rm -rf "$aln_stats"
+
+echo -e "SAMPLE\tTOTAL\tALIGNED\tFORWARD\tREVERSE\tBOTH\UNALIGNED" > "$aln_stats"
+
 for read in "$READS_DIR"/filtered_*.fastq.gz; do
     file_name=$(basename "$read" .fastq.gz)
     sample_name=${file_name#filtered_}
@@ -41,10 +49,29 @@ for read in "$READS_DIR"/filtered_*.fastq.gz; do
     aligned_read="$OUTPUT_DIR"/${sample_name}_aln.sam
     amplicon_sorted="$OUTPUT_DIR"/${sample_name}.bam
 
-    if [ ! -f "$aligned_read" ]; then
+    if [ ! -f "$amplicon_sorted" ]; then
 
-        echo "Aligninig reads to amplicons"
+        echo "Aligning reads to amplicons"
         minimap2 -ax map-ont -u b "$target_in_fasta" "$read" > "$aligned_read"
+
+        # Just to compute alignment statistics
+        samtools ampliconclip -b "$PRIMER_BED" --both-ends --strand "$aligned_read" -o "$OUTPUT_DIR/tmp.bam" 2>&1 | \
+            awk -v sample="$sample_name" 'BEGIN{OFS="\t"}
+            /TOTAL READS:/ { total = $3 }
+            /FORWARD CLIPPED:/ { total_f = $3 }
+            /REVERSE CLIPPED:/ { total_r = $3 }
+            /BOTH CLIPPED:/ { total_both = $3 }
+            /NOT CLIPPED:/ { not_clipped = $3 }
+            /EXCLUDED:/ { not_aligned = $3 }
+            
+            END {
+                only_f = total_f - total_both
+                only_r = total_r - total_both
+                
+                print sample, total, total_both, only_f, only_r, not_clipped, not_aligned
+            }' >> "$aln_stats"
+
+        rm -rf "$OUTPUT_DIR/tmp.bam"
 
         echo "Filtering alignments and clipping primers"
         samtools view -b -F 4 -q 60 "$aligned_read" | \
