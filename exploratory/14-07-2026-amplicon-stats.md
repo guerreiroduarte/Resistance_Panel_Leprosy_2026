@@ -1,8 +1,19 @@
-Untitled
+Mean read counts and size
 ================
 2026-07-14
 
-### Generates
+### Generates working dataframe
+
+To work with tidy-compatible data, the .txt file generated from the
+scripts needs to be transformed into long format, in terms of metrics
+values, and then, again, converting it into wider format setting each
+metric name as columns.
+
+Each sample is renamed to a reader-friendly format – no one will
+understand our lab sample codes. Gene names were recoded, too.
+
+Finally, this work-friendly dataframe is converted into a .csv file for
+further analysis.
 
 ``` r
 df <- read.delim(here("data/raw_data/alignments/Stats/coverage.txt"),
@@ -33,12 +44,16 @@ relabeled_ampstats <- ampstats %>%
             levels = unique(ampstats$SAMPLE),
             labels = sample_names
         ),
-        GENE = factor(
-            GENE, 
-            levels = unique(ampstats$GENE), 
-            labels = gene_names
-        )
+        GENE = factor(GENE, levels = unique(ampstats$GENE), labels = gene_names)
     )
+
+# Create a new directory to add all processed files
+processed_files_path = "data/processed_data"
+dir.create(here(processed_files_path), showWarnings = F)
+
+write.csv(relabeled_ampstats,
+          here(file.path(processed_files_path, "amplicon_stats.csv")),
+          row.names = F)
 
 glimpse(relabeled_ampstats)
 ```
@@ -54,21 +69,10 @@ glimpse(relabeled_ampstats)
     ## $ `FPCOV-1` <dbl> 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, …
     ## $ READSIZE  <dbl> 435, 517, 468, 303, 580, 366, 516, 458, 512, 459, 380, 568, …
 
-``` r
-# Create a new directory to add all processed files
-processed_files_path = "data/processed_data"
-dir.create(here(processed_files_path), showWarnings = F)
-
-write.csv(relabeled_ampstats,
-          here(file.path(processed_files_path, "amplicon_stats.csv")),
-          row.names = F)
-```
-
 ### Total reads per gene
 
 To understand how well each amplicon performed on this assay, we can sum
-up their number of reads from all samples and sort from the best to the
-worst.
+up their number of reads and sort from the best to the worst.
 
 ``` r
 fill_genes <- c(
@@ -90,7 +94,7 @@ relabeled_ampstats %>%
         fill = GENE
     )) +
     labs(title = "Number of reads per gene", x = "Number of reads", y = NULL) +
-    geom_col(colour = "black", show.legend = F) +
+    geom_col(width = 0.7, colour = "black", show.legend = F) +
     geom_text(aes(
         label = scales::label_number(
             accuracy = 1,
@@ -110,17 +114,17 @@ relabeled_ampstats %>%
 
 ![](14-07-2026-amplicon-stats_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
 
-In general, all amplicons generated more than 10K reads each. However,
-rpoB, and folP2 generated the fewer number of reads (13K and 14K,
-respectively). In this case, we need to observe the results of other
-amplicon statistics to infer about the sequencing quality of these two
-amplicons.
+All amplicons generated more than 10K reads each. However, *rpoB*, and
+*folP2* generated the lowest reads counts (13K and 14K, respectively).
+Thus, it is neded to observe the results of other amplicon statistics
+(such as depth and distribution) to understand the performance of these
+two amplicons.
 
 ### Number of reads per sample
 
 The number of reads is related to the coverage of each gene. Getting
 this count by samples tell about the quality of bacilli DNA after ExoV
-treatment.
+treatment (and also about the quality of our multiplex PCR).
 
 ``` r
 set.seed(20230407)
@@ -157,6 +161,7 @@ relabeled_ampstats %>%
     annotation_logticks(sides = "l", outside = T) +
     theme(
         legend.position = c(0.85, 0.25),
+        legend.background = element_rect(fill = "transparent", colour = NA),
         legend.text.position = "left",
         legend.text = element_text(face = "italic"),
         axis.text.y = element_text(margin = margin(r = unit(10, "mm"))),
@@ -171,7 +176,14 @@ relabeled_ampstats %>%
 ![](14-07-2026-amplicon-stats_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
 
 Sample 5 and 7 got the lowest number of reads. Maybe it is more
-informative to know the number of reads per gene in each sample
+informative to know the number of reads per gene in each sample Also, it
+could be nice to know the bacilli index of these two samples.
+
+### Mean read size and coverage
+
+Considering that we want to know the variants in these genes, one should
+know about the coverage of each amplicon that our sequencing could
+recover.
 
 ``` r
 ampsize <- c(
@@ -191,7 +203,8 @@ relabeled_ampstats %>%
         MEAN_READSIZE = mean(READSIZE),
         SD_READSIZE = sd(READSIZE),
         MEAN_COVERAGE = mean(COVERAGE) * 100,
-        SD_COVERAGE = sd(COVERAGE) * 100
+        SD_COVERAGE = sd(COVERAGE) * 100,
+        .groups = "drop"
     ) %>%
     mutate(
         READSIZE_LABEL = sprintf("%.1f ± %.1f", MEAN_READSIZE, SD_READSIZE),
@@ -412,3 +425,10 @@ folP2
 </tbody>
 
 </table>
+
+Overall, more than 70% of all amplicons – except *folP1* – could be
+recovered. Maybe, *folP1* mean read size was biased by its number of
+reads in samples 2 and 5. In both, *folP1* was the least sequenced gene.
+Again, the bacilli index of these samples can provide interesting
+insights. Could *M. leprae* genome be degraded in low bacillary index
+samples?
