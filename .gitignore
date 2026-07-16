@@ -1,9 +1,11 @@
-
 # Project file
 *.Rproj
 
 # Data files
 /data
+
+# Bibliography PDFs
+/submission/bibliography
 
 # History files
 .Rhistory
