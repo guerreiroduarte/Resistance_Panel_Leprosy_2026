@@ -22,7 +22,7 @@ ref_genome="$OUTPUT_DIR/Mleprae_TN.fasta"
 target_in_fasta="$OUTPUT_DIR/Targets.fasta"
 faidx_format="$OUTPUT_DIR/tmp_regions.txt"
 
-awk '{print $1":"$2"-"$3}' "$AMPLICON_BED" > "$faidx_format"
+awk '{print $1":"$2"-"$NF}' "$AMPLICON_BED" > "$faidx_format"
 
 if [ ! -f "$ref_genome" ]; then
     echo "Downloading M. leprae TN reference genome from NCBI..."
@@ -40,7 +40,7 @@ aln_stats="$OUTPUT_DIR/Stats/alignment.txt"
 
 rm -rf "$aln_stats"
 
-echo -e "SAMPLE\tTOTAL\tALIGNED\tFORWARD\tREVERSE\tBOTH\UNALIGNED" > "$aln_stats"
+echo -e "SAMPLE\tTOTAL\tALIGNED\tBOTH\tFORWARD\tREVERSE\tUNALIGNED" > "$aln_stats"
 
 for read in "$READS_DIR"/filtered_*.fastq.gz; do
     file_name=$(basename "$read" .fastq.gz)
@@ -49,29 +49,36 @@ for read in "$READS_DIR"/filtered_*.fastq.gz; do
     aligned_read="$OUTPUT_DIR"/${sample_name}_aln.sam
     amplicon_sorted="$OUTPUT_DIR"/${sample_name}.bam
 
-    if [ ! -f "$amplicon_sorted" ]; then
+    if [ ! -f "$aligned_read" ]; then
 
         echo "Aligning reads to amplicons"
         minimap2 -ax map-ont -u b "$target_in_fasta" "$read" > "$aligned_read"
 
-        # Just to compute alignment statistics
-        samtools ampliconclip -b "$PRIMER_BED" --both-ends --strand "$aligned_read" -o "$OUTPUT_DIR/tmp.bam" 2>&1 | \
-            awk -v sample="$sample_name" 'BEGIN{OFS="\t"}
-            /TOTAL READS:/ { total = $3 }
-            /FORWARD CLIPPED:/ { total_f = $3 }
-            /REVERSE CLIPPED:/ { total_r = $3 }
-            /BOTH CLIPPED:/ { total_both = $3 }
-            /NOT CLIPPED:/ { not_clipped = $3 }
-            /EXCLUDED:/ { not_aligned = $3 }
-            
-            END {
-                only_f = total_f - total_both
-                only_r = total_r - total_both
-                
-                print sample, total, total_both, only_f, only_r, not_clipped, not_aligned
-            }' >> "$aln_stats"
+    else
+        echo "Reads were aligned"
+    fi
 
-        rm -rf "$OUTPUT_DIR/tmp.bam"
+    # Just to compute alignment statistics
+    samtools view -b "$aligned_read" | samtools ampliconclip -b "$PRIMER_BED" --both-ends --strand - -o "$OUTPUT_DIR/tmp.bam" 2>&1 | \
+        awk -v sample="$sample_name" 'BEGIN{OFS="\t"}
+        /TOTAL READS:/     { total = $NF }
+        /FORWARD CLIPPED:/ { total_f = $NF }
+        /REVERSE CLIPPED:/ { total_r = $NF }
+        /BOTH CLIPPED:/    { total_both = $NF }
+        /EXCLUDED:/        { not_aligned = $NF }
+        
+        END {
+            only_f = total_f - total_both
+            only_r = total_r - total_both
+
+            aligned = total - not_aligned
+            
+            print sample, total, aligned, total_both, only_f, only_r, not_aligned
+        }' >> "$aln_stats"
+
+    rm -rf "$OUTPUT_DIR/tmp.bam"
+
+    if [ ! -f "$amplicon_sorted" ]; then
 
         echo "Filtering alignments and clipping primers"
         samtools view -b -F 4 -q 60 "$aligned_read" | \
@@ -81,7 +88,7 @@ for read in "$READS_DIR"/filtered_*.fastq.gz; do
         samtools index "$amplicon_sorted"
     
     else
-        echo "Reads were already aligned to reference targets..."
+        echo "Primers were already clipped"
     fi
 
 done
@@ -97,7 +104,7 @@ echo -e "METRIC\tSAMPLE\tRPOB\tGYRA\tGYRB\tFOLP1\tFOLP2\t23S_RNA_I\t23S_RNA_II" 
 samtools ampliconstats "$PRIMER_BED" "$OUTPUT_DIR"/*.bam | \
     grep -E "^(FRPERC|FDEPTH|FVDEPTH|FREADS|FPCOV)" >> "$amplicon_stats"
 
-REGIOES=($(awk 'OFS=":" {print $1, $2 "-" $3}' "$REGIONS_BED"))
+REGIOES=($(awk 'OFS=":" {print $1, $2 "-" $NF}' "$REGIONS_BED"))
 
 for bam in "$OUTPUT_DIR"/*.bam; do
     sample_name=$(basename "$bam" .bam)
