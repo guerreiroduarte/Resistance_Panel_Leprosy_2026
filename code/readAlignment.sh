@@ -75,7 +75,7 @@ for read in "$READS_DIR"/filtered_*.fastq.gz; do
 
         echo "Filtering alignments and clipping primers"
         samtools view -b -F 4 -q 60 "$aligned_read" | \
-        samtools ampliconclip -b "$PRIMER_BED" --hard-clip --both-ends --strand --clipped - -o - | \
+        samtools ampliconclip -b "$PRIMER_BED" --both-ends --strand --clipped - -o - | \
         samtools sort -o "$amplicon_sorted" -
 
         samtools index "$amplicon_sorted"
