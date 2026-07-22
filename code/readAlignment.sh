@@ -22,7 +22,7 @@ ref_genome="$OUTPUT_DIR/Mleprae_TN.fasta"
 target_in_fasta="$OUTPUT_DIR/Targets.fasta"
 faidx_format="$OUTPUT_DIR/tmp_regions.txt"
 
-awk '{print $1":"$2"-"$NF}' "$AMPLICON_BED" > "$faidx_format"
+awk '{print $1":"$2"-"$3}' "$AMPLICON_BED" > "$faidx_format"
 
 if [ ! -f "$ref_genome" ]; then
     echo "Downloading M. leprae TN reference genome from NCBI..."
