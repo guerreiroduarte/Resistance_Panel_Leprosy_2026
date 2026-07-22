@@ -9,7 +9,8 @@ dependencies:
   - filtlong=0.3.1
   - minimap2=2.31
   - samtools=1.23.1
-  - clair3=2.0.0
+  - bcftools=1.24
+  - longphase=2.0.0
   - r-base=4.4.3
   - r-here
   - rstudio-desktop
